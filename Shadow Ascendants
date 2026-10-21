@@ -1,0 +1,59 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Shadow Ascendant</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#080816;color:white;font-family:Arial;overflow:hidden;touch-action:none}canvas{width:100vw;height:100dvh;display:block}#hud{position:absolute;top:12px;left:12px;right:12px;pointer-events:none;font-size:14px;text-shadow:0 2px 5px black}.bar{height:10px;background:#43213a;border-radius:8px;overflow:hidden;width:150px;margin:5px 0 10px}.fill{height:100%;background:#ff438a;width:100%}#controls{position:absolute;bottom:20px;left:12px;right:12px;display:flex;justify-content:space-between;align-items:end}button{color:white;background:#392078;border:1px solid #b8a0ff;border-radius:16px;padding:14px 10px;font-weight:bold;touch-action:none}.move{width:100px;height:100px;border-radius:50%;background:#ffffff18}.actions{display:grid;grid-template-columns:repeat(2,65px);gap:8px}.actions button{height:58px;padding:4px;font-size:11px}#msg{position:absolute;top:43%;width:100%;text-align:center;font-weight:bold;color:#d9caff;pointer-events:none}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud">SHADOW ASCENDANT · LV <span id="lv">1</span><br>HP <div class="bar"><div id="hp" class="fill"></div></div>Boss HP <div class="bar"><div id="bhp" class="fill" style="background:#9a6cff"></div></div><span id="stats">Shadows: 0 · Kills: 0</span></div>
+<div id="msg">Tap START to enter the dungeon<br><button onclick="start()">START</button></div>
+<div id="controls"><button class="move" id="move">MOVE</button><div class="actions"><button onclick="act('slash')">SLASH</button><button onclick="act('dodge')">DODGE</button><button onclick="act('burst')">SHADOW BURST</button><button onclick="act('summon')">SUMMON</button></div></div>
+<script>
+const c=document.querySelector('#c'),x=c.getContext('2d');
+let w,h,run=false,p={x:180,y:300,hp:100,lv:1},en=[],sh=[],fx=[],kills=0,stage=1,cd=0,move={x:0,y:0},boss=null;
+function size(){w=c.width=innerWidth;h=c.height=innerHeight;p.x=Math.min(p.x,w/2);p.y=Math.min(p.y,h/2)}
+onresize=size;size();
+function spawn(b=false){let e={x:Math.random()*w,y:70+Math.random()*(h-160),hp:b?30+stage*12:3,r:b?32:13,boss:b,hurt:0};en.push(e);if(b)boss=e}
+function start(){run=true;document.querySelector('#msg').style.display='none';for(let i=0;i<5;i++)spawn();spawn(true)}
+function act(a){if(!run)return;
+if(a==='slash'){en.forEach(e=>{if(Math.hypot(e.x-p.x,e.y-p.y)<85)e.hp-=5});fx.push({x:p.x,y:p.y,r:65,t:.2})}
+if(a==='burst'&&cd<=0){cd=3;en.forEach(e=>{if(Math.hypot(e.x-p.x,e.y-p.y)<155)e.hp-=12});fx.push({x:p.x,y:p.y,r:150,t:.5})}
+if(a==='dodge'){p.x=Math.max(15,Math.min(w-15,p.x+move.x*85));p.y=Math.max(65,Math.min(h-20,p.y+move.y*85));p.inv=.6}
+if(a==='summon'&&sh.length<Math.min(6,1+Math.floor(p.lv/2))){sh.push({x:p.x+25,y:p.y+10})}
+}
+let held=false,last={x:0,y:0};
+const m=document.querySelector('#move');
+m.onpointerdown=e=>{held=true;m.setPointerCapture(e.pointerId);last={x:e.clientX,y:e.clientY}};
+m.onpointermove=e=>{if(!held)return;move.x=Math.max(-1,Math.min(1,(e.clientX-last.x)/35));move.y=Math.max(-1,Math.min(1,(e.clientY-last.y)/35));last={x:e.clientX,y:e.clientY}};
+function stop(){held=false;move={x:0,y:0}}m.onpointerup=stop;m.onpointercancel=stop;
+function draw(){
+x.clearRect(0,0,w,h);x.fillStyle='#0b0b20';x.fillRect(0,0,w,h);
+x.strokeStyle='#28234a';for(let i=0;i<w;i+=45){x.beginPath();x.moveTo(i,0);x.lineTo(i,h);x.stroke()}for(let i=0;i<h;i+=45){x.beginPath();x.moveTo(0,i);x.lineTo(w,i);x.stroke()}
+fx.forEach(f=>{x.strokeStyle='#bca6ff';x.lineWidth=4;x.beginPath();x.arc(f.x,f.y,f.r,0,7);x.stroke()});
+en.forEach(e=>{x.fillStyle=e.boss?'#651f87':'#33205e';x.strokeStyle='#bd9aff';x.lineWidth=2;x.beginPath();x.arc(e.x,e.y,e.r,0,7);x.fill();x.stroke();x.fillStyle='#ff75dc';x.fillRect(e.x-7,e.y-3,4,3);x.fillRect(e.x+4,e.y-3,4,3)});
+sh.forEach(s=>{x.fillStyle='#7b68ee';x.beginPath();x.arc(s.x,s.y,9,0,7);x.fill()});
+x.fillStyle=p.inv?'white':'#21183f';x.strokeStyle='#e0d4ff';x.lineWidth=3;x.beginPath();x.arc(p.x,p.y,16,0,7);x.fill();x.stroke();
+}
+let prev=0;
+function loop(t){let dt=Math.min(.04,(t-prev)/1000||0);prev=t;
+if(run){
+cd=Math.max(0,cd-dt);p.inv=Math.max(0,(p.inv||0)-dt);
+p.x=Math.max(15,Math.min(w-15,p.x+move.x*180*dt));p.y=Math.max(65,Math.min(h-20,p.y+move.y*180*dt));
+en.forEach(e=>{let dx=p.x-e.x,dy=p.y-e.y,d=Math.hypot(dx,dy)||1;e.x+=dx/d*(e.boss?25:42)*dt;e.y+=dy/d*(e.boss?25:42)*dt;if(d<e.r+15&&p.inv<=0)p.hp-= (e.boss?18:9)*dt});
+sh.forEach(s=>{let e=en.find(a=>a.hp>0);if(e){let dx=e.x-s.x,dy=e.y-s.y,d=Math.hypot(dx,dy)||1;s.x+=dx/d*100*dt;s.y+=dy/d*100*dt;if(d<e.r+10)e.hp-=5*dt}});
+en=en.filter(e=>{if(e.hp<=0){kills++;if(e.boss){stage++;p.lv++;p.hp=Math.min(100,p.hp+35);spawn(true);for(let i=0;i<4;i++)spawn()}else if(Math.random()<.18)spawn();return false}return true});
+fx=fx.filter(f=>(f.t-=dt)>0);
+document.querySelector('#hp').style.width=Math.max(0,p.hp)+'%';document.querySelector('#lv').textContent=p.lv;document.querySelector('#bhp').style.width=boss&&en.includes(boss)?Math.max(0,boss.hp/(30+stage*12)*100)+'%':'0%';document.querySelector('#stats').textContent='Shadows: '+sh.length+' · Kills: '+kills+' · Stage: '+stage;
+if(p.hp<=0){run=false;document.querySelector('#msg').innerHTML='Hunter defeated! Refresh to restart.';document.querySelector('#msg').style.display='block'}
+}
+draw();requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
